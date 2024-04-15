@@ -28,6 +28,8 @@
 (tool-bar-mode -1)
 (menu-bar-mode -1)
 (tooltip-mode -1)
+;; Desnecessário, mas gosto de também definir o título da janela aqui
+(setq frame-title-format "%b - GNU emacs")
 
 ;; Previne o carregamento do modo Lisp Interaction ao abrir o emacs
 (setq initial-major-mode 'fundamental-mode
