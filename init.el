@@ -1,103 +1,137 @@
 ;; -*- lexical-binding: t; -*-
-(setq ed/config-dir    "~/.config/emacs/"   ;; diretório de configuração
-      ed/cache-dir     "~/.cache/emacs/"    ;; diretório de dados
-      ed/fixed-font    "Inconsolata LGC 10" ;; fonte monoespaçada
-      ed/fixed-serif   "IBM Plex Mono 10"   ;; fonte monoespaçada (serifas)
-      ed/variable-font "Cantarell 12")      ;; fonte variável
 
-;; Indentação com 4 espaços por padrão
-(setq-default tab-width 4
-              indent-tabs-mode nil)
+(setq ed/config-dir    "~/.config/emacs/"
+      ed/cache-dir     "~/.local/share/emacs/"
+      ed/fixed-font    "Input Mono 10"
+      ed/var-font      "Noto Sans 12"
+      ed/evil-leader   "SPC"
+      ed/global-leader "C-c")
 
-(setq scroll-margin 10           ;; espaço vertical a partir do cursor
-      scroll-conservatively 101  ;; rolamento suave
-      split-width-threshold nil) ;; abre janelas em split vertical por padrão
+(setq scroll-margin 10
+      scroll-conservatively 101  ;; rolagem suave
+      split-width-threshold nil) ;; split horizontal por padrão
 
-(setopt use-short-answers t) ;; respostas curtas
-(electric-pair-mode 1) ;; delimitadores balanceados
+(setopt use-short-answers t)
+(electric-pair-mode 1)
+(visual-line-mode 1)
+
+;; -----------------------------------------------------------------------------
 
 (require 'package)
-;; Adiciona o MELPA aos repositórios de pacotes
 (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
 
 (package-initialize)
-;; Mantém as listas de pacotes sempre atualizadas
 (unless package-archive-contents
   (package-refresh-contents))
 
 (require 'use-package)
-(setq use-package-always-ensure t) ;; garante a instalação de todos os pacotes
+(setq use-package-always-ensure t)
+
+;; -----------------------------------------------------------------------------
 
 (setq user-emacs-directory (expand-file-name ed/cache-dir))
-(use-package no-littering) ;; move muita coisa para o diretório acima
+(use-package no-littering)
 
-;; Alguns arquivos específicos usados pelo emacs
 (setq url-history-file (no-littering-expand-var-file-name "url-history")
       custom-file (no-littering-expand-etc-file-name "custom.el"))
 
-;; Diretórios próprios para backups e salvamentos automáticos
 (setq backup-directory-alist
       `(("." . ,(no-littering-expand-var-file-name "backups/")))
       auto-save-file-name-transforms
       `((".*" ,(no-littering-expand-var-file-name "auto-save/") t)))
 
-(defvar-keymap ed/personal-map
-  :doc "Prefixo para atalhos personalisados"
-  "p" #'previous-buffer
-  "=" #'indent-region)
-(keymap-set global-map "C-z" ed/personal-map)
+;; -----------------------------------------------------------------------------
 
-;; Alterações em atalhos nativos
-(keymap-set global-map "M-z" #'zap-up-to-char)
-(setq kill-whole-line t) ;; C-k mata a linha inteira
+(tool-bar-mode     -1) ;; sem barra de ferramentas
+(menu-bar-mode     -1) ;; sem barra de menus
+(scroll-bar-mode   -1) ;; sem barra de rolagem
+(blink-cursor-mode -1) ;; não gosto de cursor piscando
+(set-fringe-mode    5) ;; pequenas margens
+
+(set-face-attribute 'default nil :font ed/fixed-font)
+(set-face-attribute 'fixed-pitch nil :font ed/fixed-font)
+(set-face-attribute 'variable-pitch nil :font ed/var-font)
+
+(setq display-line-numbers-type 'relative)
+(defun ed/text-visual-setup ()
+  "Configurações visuais em buffers de texto"
+  (hl-line-mode 1)
+  (display-line-numbers-mode 1))
+
+(dolist (mode '(text-mode-hook
+                prog-mode-hook
+                conf-mode-hook))
+  (add-hook mode #'ed/text-visual-setup))
+
+(use-package catppuccin-theme
+  :config (load-theme 'catppuccin :no-confirm))
+
+;; -----------------------------------------------------------------------------
+
+(setq display-time-format "%H:%M"
+      display-time-default-load-average nil)
+(column-number-mode 1) ;; número da coluna na modeline
+(display-time-mode  1) ;; horário na modeline
+
+(use-package minions
+  :custom (minions-prominent-modes '(flymake-mode))
+  :config (minions-mode 1))
+
+;; -----------------------------------------------------------------------------
 
 (use-package which-key
   :defer 0
   :config (which-key-mode 1)
   (setq which-key-idle-delay 0.3))
 
-(setq modus-themes-org-blocks 'gray-background ;; fundo cinza em blocos de código
-      modus-themes-italic-constructs t         ;; uso generoso do itálico
-      modus-themes-mixed-fonts t)              ;; fontes monoespaçadas e variáveis
+(global-set-key (kbd "<escape>") #'keyboard-escape-quit)
 
-(use-package doom-themes
+(use-package evil
+  :init
+  (setq evil-want-integration t)
+  (setq evil-want-keybinding nil)
+  (setq evil-want-C-u-scroll t)
+  (setq evil-want-Y-yank-to-eol t) ;; Y => y$
+  (setq evil-respect-visual-line-mode t)
+  (setq evil-vsplit-window-right t)
+  (setq evil-split-window-below t)
+  (setq evil-undo-system 'undo-redo)
   :config
-  (setq doom-themes-enable-italic t  ;; permite itálico
-        doom-themes-enable-bold nil) ;; não curto muito negrito
-  (load-theme 'doom-one t)
-  ;; Comentários em itálico (o `doom-one' não tem isso)
-  (set-face-attribute 'font-lock-comment-face nil :slant 'italic)
-  (doom-themes-org-config)) ;; configurações extras para org
+  (evil-mode 1)
+  (define-key evil-insert-state-map (kbd "C-g") 'evil-normal-state))
 
-(setq display-time-format "%H:%M"
-      display-time-default-load-average nil)
+(use-package evil-collection
+  :after evil
+  :ensure t
+  :config
+  (evil-collection-init))
 
-(blink-cursor-mode -1) ;; não gosto de cursor piscando
-(set-fringe-mode    0) ;; sem margens desnecessárias
-(column-number-mode 1) ;; número da coluna na modeline
-(display-time-mode  1) ;; horário na modeline
+(use-package evil-nerd-commenter
+  :after evil
+  :config (evilnc-default-hotkeys t)
+  :bind (:map evil-normal-state-map
+              ("gc" . evilnc-comment-or-uncomment-lines)))
 
-(setq display-line-numbers-type 'relative)
-(defun ed/text-visual-setup ()
-  "Configurações visuais em buffers de texto"
-  (hl-line-mode 1)               ;; destaque para a linha atual
-  (display-line-numbers-mode 1)) ;; linhas numeradas
+(use-package general
+  :after evil
+  :config
+  (general-create-definer ed/leader-bind
+    :states '(emacs insert normal)
+    :prefix ed/evil-leader
+    :global-prefix ed/global-leader)
+  (ed/leader-bind
+    "."  #'find-file
+    ":"  '(execute-extended-command :wk "M-x")
+    "w"  '(save-buffer :wk "write")
+    "b"  #'switch-to-buffer
+    "c"  #'compile
+    "g"  #'recompile
+    "h"  #'evil-window-left
+    "l"  #'evil-window-right
+    "k"  #'evil-window-up
+    "j"  #'evil-window-down)
 
-;; Executa as configurações visuais acima
-(dolist (mode '(text-mode-hook
-                prog-mode-hook
-                conf-mode-hook))
-  (add-hook mode #'ed/text-visual-setup))
-
-;; O `minions' resume bem os modos menores na modeline
-(use-package minions
-  :custom (minions-prominent-modes '(flymake-mode))
-  :config (minions-mode 1))
-
-(set-face-attribute 'default nil :font ed/fixed-font)
-(set-face-attribute 'fixed-pitch nil :font ed/fixed-font)
-(set-face-attribute 'fixed-pitch-serif nil :font ed/fixed-serif)
-(set-face-attribute 'variable-pitch nil :font ed/variable-font)
+;; -----------------------------------------------------------------------------
 
 (use-package orderless
   :init
@@ -107,7 +141,7 @@
 
 (defun ed/minibuffer-del (arg)
   "Se o conteúdo do minibuffer for um caminho, apaga até a pasta pai do arquivo,
-do contrário, apaga normalmente (i.e. um caractere só)"
+    do contrário, apaga normalmente (i.e. um caractere só)"
   ;; Peguei isso emprestado da configuração de um amigo
   (interactive "p")
   (if minibuffer-completing-file-name
@@ -117,113 +151,81 @@ do contrário, apaga normalmente (i.e. um caractere só)"
     (backward-delete-char arg)))
 
 (use-package vertico
-  :bind (:map minibuffer-local-map
+  :bind (:map vertico-map
+              ("C-j" . vertico-next)
+              ("C-k" . vertico-previous)
+              :map minibuffer-local-map
               ("M-h" . backward-kill-word)
               ("<backspace>" . ed/minibuffer-del))
   :init
   (setq vertico-cycle t)
   (vertico-mode))
+(use-package marginalia :init (marginalia-mode))
 
-(use-package marginalia :init (marginalia-mode)) ;; minibuffer mais informativo
-
-(use-package consult
+(use-package corfu
+  :demand t
+  :custom
+  (corfu-cycle t)
+  :init
+  (global-corfu-mode 1)
   :config
-  (setq consult-preview-key "M-.") ;; previews automáticas me deixam desorientado
-  (keymap-set ed/personal-map "b" #'consult-buffer)
-  (keymap-set ed/personal-map "s" #'consult-line)
-  (keymap-set ed/personal-map "r" #'consult-ripgrep)
-  (keymap-set ed/personal-map "d" #'consult-flymake))
+  (keymap-unset corfu-map "RET")
+  (setq tab-always-indent 'complete)
+  (setq completion-cycle-threshold 3))
 
-(use-package company
+;; -----------------------------------------------------------------------------
+
+(use-package dired
+  :ensure nil
   :config
-  (setq-default company-format-margin-function nil)
-  (add-hook 'prog-mode-hook #'company-mode))
+  (setq dired-listing-switches "-lAh --group-directories-first --sort=extension"
+        delete-by-moving-to-trash t
+        dired-kill-when-opening-new-dired-buffer t)
+  (evil-collection-define-key 'normal 'dired-mode-map
+    "h" #'dired-up-directory
+    "l" #'dired-find-file
+    " " nil))
+(general-define-key :states 'normal "-" #'dired-jump) ;; estilo `vim-vinegar'
 
-(defun ed/org-visual-setup ()
-  "Configurações visuais do modo org"
-  (org-indent-mode)
-  (visual-line-mode)
-  ;; Símbolos bonitinhos para certos elementos do org
-  (setq prettify-symbols-alist
-        '(("#+begin_src" . ?λ)
-          ("#+end_src"   . ?λ)))
-  (prettify-symbols-mode))
-
-(add-hook 'org-mode-hook #'ed/org-visual-setup)
-
-(setq org-startup-folded 'content ;; corpo dos documentos vem escondido ("folded")
-      org-hide-emphasis-markers t ;; delimitadores de formatação ficam ocultos
-      org-ellipsis "_")
-
-;; Essas configurações de indentação garantem que código fique livremente
-;; indentado, sem a constante interferência do org
-(setq org-src-fontify-natively t
-      org-src-window-setup 'current-window
-      org-src-strip-leading-and-trailing-blank-lines t
-      org-src-preserve-indentation t
-      org-src-tab-acts-natively t)
-
-;; A biblioteca nativa `org-tempo' fornece atalhos para a inserção rápida
-;; dos delimitadores de blocos, o que é bastante prático
-(with-eval-after-load 'org
-  (require 'org-tempo)
-  (add-to-list 'org-modules 'org-tempo)
-  ;; Atalhos para emacs-lisp e python
-  (add-to-list 'org-structure-template-alist '("el" . "src emacs-lisp"))
-  (add-to-list 'org-structure-template-alist '("py" . "src python")))
-
-;; O modo `electric-pair' é muito útil, mas acaba interferindo na inserção
-;; de delimitadores configurada acima ao tentar completar parênteses angulares.
-;; As linha abaixo resolvem essa questão
-(defun ed/electric-no-angle-brackets ()
-  "Desativa o balanceamento de <> pelo eletric-pair-mode"
-  (setq-local electric-pair-inhibit-predicate
-              `(lambda (ch)
-                 (if (char-equal ch ?<) t (,electric-pair-inhibit-predicate ch)))))
-(add-hook 'org-mode-hook #'ed/electric-no-angle-brackets)
-
-(defun ed/ask-tangle-config ()
-  "Pergunta se os arquivos de emacs-lisp (init.el e early-init.el)
-devem ser gerados ao salvar config.org"
-  (when (string-equal (buffer-file-name)
-                      (expand-file-name "config.org" ed/config-dir))
-    (if (y-or-n-p "Gerar arquivos de emacs-lisp? ")(org-babel-tangle))))
-
-(add-hook 'org-mode-hook
-          ;; Função é executada sempre que arquivos org são salvos
-          (lambda () (add-hook 'after-save-hook #'ed/ask-tangle-config)))
-
-(setq dired-listing-switches "-lAh --group-directories-first"
-      delete-by-moving-to-trash t)
+;; Interface mais colorida com `diredfl'
+(use-package diredfl
+  :after dired
+  :hook (dired-mode . diredfl-mode))
 
 (use-package vterm
-  :config
-  (keymap-set ed/personal-map "T" #'vterm)
-  (keymap-set ed/personal-map "t" #'vterm-other-window))
+  :config (ed/leader-bind "t" #'vterm-other-window :wk "terminal"))
 
 (use-package magit
-  :config
-  (keymap-set ed/personal-map "g" #'magit-status)
-  (keymap-set project-prefix-map "g" #'magit-project-status))
+  :init (setq magit-section-visibility-indicator nil)
+  :config (ed/leader-bind "g" '(magit-status :wk "git")))
+
+;; -----------------------------------------------------------------------------
+
+(require 'treesit)
+(customize-set-variable 'treesit-font-lock-level 3)
+(setq treesit-language-source-alist
+      '((c "https://github.com/tree-sitter/tree-sitter-c" "v0.24.1")
+	(cpp "https://github.com/tree-sitter/tree-sitter-cpp" "v0.23.4")))
+
+(setq major-mode-remap-alist
+      '((c-mode . c-ts-mode)))
 
 (push "~/.local/bin" exec-path) ;; alguns servidores LSP estão aqui
-(use-package highlight-indent-guides ;; guias de indentação
-  :hook (prog-mode . highlight-indent-guides-mode))
 
-;; Colorização sintática melhor com o `tree-sitter.el'
-(use-package tree-sitter
-  :init (global-tree-sitter-mode)
-  :hook (tree-sitter-after-on . tree-sitter-hl-mode))
-(use-package tree-sitter-langs
-  :after tree-sitter)
+;; -----------------------------------------------------------------------------
 
+(use-package compile
+ :hook (compilation-filter . ansi-color-compilation-filter)
+ :custom (ansi-color-bold-is-bright 't))
 (setq compilation-scroll-output t)
 
-(defun ed/clang-setup ()
-  "Configurações para C e C++"
-  (c-set-style "user"))
+(use-package project
+  :ensure nil
+  :config
+  (setopt xref-search-program 'ripgrep)
+  (ed/leader-bind
+    "p" (general-simulate-key "C-x p" :which-key "project")))
 
-(add-hook 'c-mode-hook #'ed/clang-setup)
-(add-hook 'c++-mode-hook #'ed/clang-setup)
+;; -----------------------------------------------------------------------------
 
- (setq gc-cons-threshold (* 20 1000 1000))
+(setq gc-cons-threshold (* 20 1000 1000))
