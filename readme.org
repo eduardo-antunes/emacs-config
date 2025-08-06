@@ -1,0 +1,5 @@
+Essa é a minha configuração pessoal do [[https://www.gnu.org/software/emacs/][GNU emacs]], um editor de texto livre e gráfico.
+Ela foi feita pensando principalmente na versão 30.1, que é a que se tem mais fácil
+acesso no Fedora, mas é provável que funcione também no emacs 29. Além de instalar
+a versão correta do editor e baixar esse repositório no diretório =.config/emacs=,
+é recomendável instalar os programas =fd= e =ripgrep=.
